@@ -55,6 +55,10 @@ lib: generate_lib
 rtld: generate_rtld
 	$(CC) $(CFLAGS) $(CFLAGSRTLD) -c -I$(INCLUDEDIR) generated/*.c
 
+shared: generate_lib
+	$(CC) $(CFLAGS) $(CFLAGSLIB) -c -I$(INCLUDEDIR) -fPIC generated/*.c
+	$(CC) -m32 -shared -o libfastbt.so libfastbt.o fbt_*.o
+
 clean:
 	rm -f *.o *~
 	rm -rf $(GEN_DIR)

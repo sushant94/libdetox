@@ -479,7 +479,7 @@ int sl_main(int argc, char **argv, char **envp, Elf32_auxv_t *auxv) {
 #endif
 
   /* Load executable and all dependent objects */
-  dso *so_main = load_elf(0, name, path, fd, 0, 0, NULL);
+  dso *so_main = load_elf(0, name, path, fd, 0, 1, NULL);
   
   if(so_main->type != ET_EXEC) {
 	  so_main->ispie = 1;
@@ -925,7 +925,7 @@ void *dl_open(const char *file, long mode, const void *caller_dlopen,
   PROT_DATA(path, MAX_PATH_LEN);
 
   /* Load the shared object */
-  dso *so_loaded = load_elf(caller, name, path, fd, 1, 0, NULL);
+  dso *so_loaded = load_elf(caller, name, path, fd, 1, 1, NULL);
 
 #if defined(VERIFY_CFTX)
   /* This dso was loaded dynamically */

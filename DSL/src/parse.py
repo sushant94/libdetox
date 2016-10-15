@@ -24,27 +24,27 @@ class AssemblyRewriter(object):
     def __init__(self):
         self.magic_number = int('13370000', 16)
         self.macros = {
-            'call_abs': CallAbsMacro,
-            'jmp_abs': JmpAbsMacro,
-            'store_label': StoreLabelMacro
-        }
+                'call_abs': CallAbsMacro,
+                'jmp_abs': JmpAbsMacro,
+                'store_label': StoreLabelMacro
+                }
         self.marker = ['BEGIN_ASM', 'END_ASM']
         self.macro_instances = None
 
     def rewrite_asm(self, asm):
         """This step turns the code of a DSL block into valid AT&T assembler
         syntax and compiles it with the GNU Assembler.
-        
+
         Arguments:
             asm: The source code in our assembler DSL
-            
+
         Returns:
-            An objdump for the generated assembly (see objdump.py) 
+            An objdump for the generated assembly (see objdump.py)
         """
         variables = {}
-        
+
         raw = ''
-        
+
         # First, let's remove all multiline comments
         # TODO: currently does not work with line numbers
         found = True
@@ -58,8 +58,8 @@ class AssemblyRewriter(object):
                 linebreaks = ''.join(lb for lb in asm[start:end+2] if lb in ('\n', '\r'))
                 print 'linebreaks = ', len(linebreaks)
                 asm = asm[:start] + linebreaks + asm[end+2:]
-        
-        
+
+
         # Rewrite assembly code
         self.macro_instances = []
 
@@ -67,8 +67,8 @@ class AssemblyRewriter(object):
             line, _, _ = line.partition('//')
 
             if len(line.strip()) == 0:
-                continue    
-        
+                continue
+
             # Parse this line
             line = line.strip()
             command, _, args = line.partition(' ')
@@ -83,23 +83,23 @@ class AssemblyRewriter(object):
                 new_line = '\n%s:\n%s\n' % (label, macro.expand())
 
                 line = new_line
-                
+
                 self.macro_instances += [macro]
 
             # Does this line contain a variable?
-            pattern = r'\{(.*?)\}'        
+            pattern = r'\{(.*?)\}'
             match = re.search(pattern, line)
             while match:
                 var_name = match.groups()[0]
                 if var_name not in variables:
                     variables[var_name] = self.magic_number
                     self.magic_number += 1
-                
+
                 magic = variables[var_name]
 
                 line = line[:match.span()[0]] + ('%s' % magic) + line[match.span()[1]:]
-                match = re.search(pattern, line)            
-            
+                match = re.search(pattern, line)
+
             raw += '_I%d:\n' % line_pos
             raw += line + '\n'
 
@@ -107,14 +107,14 @@ class AssemblyRewriter(object):
         f = tempfile.NamedTemporaryFile('w', suffix='.as', delete=False)
         f.write(raw)
         f.close()
-        
+
         obj_path = os.path.splitext(f.name)[0] + '.out'
         p = subprocess.Popen(
-            'as --32 -march=i386 "%s" -o "%s"' % (f.name, obj_path),
-            shell=True
-        )
+                'as --32 -march=i386 "%s" -o "%s"' % (f.name, obj_path),
+                shell=True
+                )
         p.wait()
-        
+
         if p.returncode != 0:
             raise Exception('Assembly generation failed.')
 
@@ -134,7 +134,7 @@ class AssemblyRewriter(object):
         for label, offset in obj.labels.iteritems():
             if not label.startswith('_I'):
                 continue
-            
+
             instruction_no = int(label[2:])
 
             instruction_mapping[offset] = instruction_no
@@ -148,7 +148,7 @@ class AssemblyRewriter(object):
         # Generate source code
         writer = BatchedWriter(CWriter(original_target))
         offset = 0
-        
+
         while offset < len(obj.bytes):
             # Emit line number
             instruction_no = instruction_mapping.get(offset, None)
@@ -160,35 +160,33 @@ class AssemblyRewriter(object):
             byte = obj.bytes[offset]
             if offset in obj.code:
                 writer.write_comment(str(obj.code.get(offset)))
-            
+
             macro_written = 0
             if offset in macro_offsets:
                 macro = macro_offsets[offset]
                 # TODO: clean up data passed into macro generation step
                 macro_written = macro.generate(writer, original_target, obj)
                 offset += macro_written
-                writer.end_line()               
+                writer.end_line()
 
-            if macro_written == 0: 
-              if offset in offsets:
-                  writer.write_expression(offsets[offset])
-                  offset += 4
-                  
-              else:
-                  writer.write_byte(byte)
-                  offset += 1      
+            if macro_written == 0:
+                if offset in offsets:
+                    writer.write_expression(offsets[offset])
+                    offset += 4
+                else:
+                    writer.write_byte(byte)
+                    offset += 1
+                writer.end_line()
 
-              writer.end_line()  
-                
-        writer.flush()    
-        writer.end()              
+        writer.flush()
+        writer.end()
         return writer.source
 
     def process_file(self, in_path, out_path):
-        """Process a whole source file, stored at <in_path> and writes the 
-        result, a (hopefully) valid source file in the target language to 
+        """Process a whole source file, stored at <in_path> and writes the
+        result, a (hopefully) valid source file in the target language to
         <out_path>
-        
+
         Arguments:
             in_path: The path to the source file containing DSL fragments
             out_path: Where to store the resulting source file
@@ -196,16 +194,16 @@ class AssemblyRewriter(object):
         Returns:
             None
         """
-        
+
         # The generated C source code
         out = ''
-        
+
         # Are we currently parsing assembler code?
         is_asm = False
-        
+
         # The assembler code in the current assembly block
-        asm = ''    
-        
+        asm = ''
+
         # The name of the target C variable which will contain the address at which we'll write the machine code
         asm_target = None
 
@@ -215,15 +213,15 @@ class AssemblyRewriter(object):
         # Keep track of what file the current source line is part of
         current_line, current_file = 1, None
         block_line, block_file = None, None
-        
+
         print 'Rewriting <%s> to <%s>' % (in_path, out_path)
 
         # Parse the source file and rewrite each assembler block
         for line in open(in_path, 'r'):
             begin_match = re.match(r'%s\(([a-zA-Z_]+)\)' % re.escape(self.marker[0]), line.strip())
-            
+
             line_number_match = re.match(line_number_pattern, line.strip())
-            
+
             if line.strip().startswith('#'):
                 if line_number_match:
                     current_line, current_file = line_number_match.groups()
@@ -234,19 +232,20 @@ class AssemblyRewriter(object):
                     # Write out current line number, so line numbers still match
                     # up
                     out += '# %d "%s"\n' % (current_line, current_file)
-                    
+
                     # Start capturing input string
                     line_mapping = []
                     asm_target = begin_match.groups()[0]
                     is_asm = True
                     asm = ''
                 elif line.strip().startswith(self.marker[1]):
-                    assert is_asm, "%s without %s." % (self.marker[1], self.marker[0])            
+                    assert is_asm, "%s without %s. %d" % (self.marker[1],
+                            self.marker[0], current_line)
                     is_asm = False
                     obj = self.rewrite_asm(asm)
                     out += self.create_target_code(obj, asm_target, line_mapping)
-                    asm = ''            
-                    
+                    asm = ''
+
                     # Make sure line numbers are consistent after the assembly
                     # block
                     out += '# %d "%s"\n' % (current_line + 1, current_file)
@@ -255,7 +254,7 @@ class AssemblyRewriter(object):
                     asm += line
                 else:
                     out += line
-                current_line += 1                    
+                current_line += 1
 
         # We have some left-over assembly code: missing an end marker
         if len(asm) > 0:
@@ -264,14 +263,14 @@ class AssemblyRewriter(object):
         # Write result
         f = open(out_path, 'w')
         f.write(out)
-        f.close()        
+        f.close()
 
-    def main(self):   
+    def main(self):
         p = ArgParser()
         (options, in_path, out_path) = p.parse_args()
         self.options = options
         obj = self.process_file(in_path, out_path)
-    
+
 
 if __name__ == '__main__':
     asm_rewriter = AssemblyRewriter()

@@ -827,8 +827,8 @@ long dl_iterate_phdr (long (*callback) (struct dl_phdr_info *info,
        struct (First 16 bytes). */
     info.dlpi_addr = (Elf32_Addr)so->base_addr;
     info.dlpi_name = so->path;
-    info.dlpi_phdr = so->program_header;
-    info.dlpi_phnum = so->program_header_num;
+    info.dlpi_phdr = so->l_phdr;
+    info.dlpi_phnum = so->l_phnum;
 
     /* Callback */
     ret = callback (&info, 16, data);

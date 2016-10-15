@@ -28,7 +28,7 @@
  * MA  02110-1301, USA.
  */
 
-#include <stddef.h> /* offsetof */
+#include <stddef.h> /* __builtin_offsetof */
 
 #include "fbt_trampoline.h"
 
@@ -850,7 +850,7 @@ static void initialize_ret_trampolines(struct thread_local_data *tld) {
     
     /* Retrieve return address of top-most entry */
     movl {&tld->top_of_shadowstack}, %ebx
-    movl (SHADOWSTACK_ENTRY_OFFSETOF_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
+    movl (SHADOWSTACK_ENTRY___builtin_offsetof_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
     
     /* Compare target to return address */
     cmpl 4(%esp), %ebx
@@ -860,7 +860,7 @@ static void initialize_ret_trampolines(struct thread_local_data *tld) {
 	 * this will result in a sandbox breakout! */
     /* Retrieve translated return address and overwrite indirection target */
     movl {&tld->top_of_shadowstack}, %ebx
-    movl (SHADOWSTACK_ENTRY_OFFSETOF_TRANSLATED_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx /* !it seems to happen here! not always! maybe only for call *(0x40)%eax type of calls?*/
+    movl (SHADOWSTACK_ENTRY___builtin_offsetof_TRANSLATED_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx /* !it seems to happen here! not always! maybe only for call *(0x40)%eax type of calls?*/
     movl %ebx, {&tld->ind_target}
     subl $ SHADOWSTACK_ENTRY_SIZE, {&tld->top_of_shadowstack}
     popl %ebx
@@ -957,7 +957,7 @@ static void initialize_ret_trampolines(struct thread_local_data *tld) {
     
     /* Retrieve return address of top-most entry */
     movl ${&tld->top_of_shadowstack}, %ebx
-    movl (SHADOWSTACK_ENTRY_OFFSETOF_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
+    movl (SHADOWSTACK_ENTRY___builtin_offsetof_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
     
     /* Compare target to return address */
     cmpl 8(%esp), %ebx
@@ -966,7 +966,7 @@ static void initialize_ret_trampolines(struct thread_local_data *tld) {
 
     /* Retrieve translated return address and overwrite indirection target */
     movl ${&tld->top_of_shadowstack}, %ebx
-    movl (SHADOWSTACK_ENTRY_OFFSETOF_TRANSLATED_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
+    movl (SHADOWSTACK_ENTRY___builtin_offsetof_TRANSLATED_RETURN_ADDRESS - SHADOWSTACK_ENTRY_SIZE)(%ebx), %ebx
     movl %ebx, {&tld->ind_target}
     subl $ SHADOWSTACK_ENTRY_SIZE, {&tld->top_of_shadowstack}
     
@@ -1627,10 +1627,10 @@ static void initialize_signal_trampoline(struct thread_local_data *tld) {
     movl 12(%esp), %eax
 
     // Debug
-    movl ${tld}, {offsetof(fbt_siginfo_t, value)}(%eax)
+    movl ${tld}, {__builtin_offsetof(fbt_siginfo_t, value)}(%eax)
 
     // Load si_ptr into %eax
-    movl {offsetof(fbt_siginfo_t, value)}(%eax), %eax
+    movl {__builtin_offsetof(fbt_siginfo_t, value)}(%eax), %eax
 
     cmpl ${tld}, %eax
 

@@ -61,6 +61,8 @@ struct thread_local_data* fbt_init(struct ia32_opcode *opcode_table) {
   DUMP_START();
   DEBUG_START();
 
+  /*write (1, "hello!\n", 7);*/
+
   struct thread_local_data *tld = fbt_init_tls();
   #ifdef SHARED_DATA
   fbt_init_shared_data(tld);

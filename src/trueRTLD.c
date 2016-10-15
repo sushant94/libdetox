@@ -37,6 +37,7 @@
 void _entry(/*long argc,*/ char *argp) {
   /* Get number of command line arguments */
   long argc;
+  write(1, "started!\n", 9);
 
   asm volatile (/*"push %%ebp ;"
 				"mov %%esp, %%ebp ;"
