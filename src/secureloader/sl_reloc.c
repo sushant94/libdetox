@@ -45,13 +45,11 @@ extern dso *so_chain;
 long num_relocs = 0;
 #endif
 
-
 void do_relocations() {
   dso *so;
 
   /* Do this in reverse order because of COPY relocations! */
   for (so = so_chain; so->next != 0; so = so->next);
-
   for (; so != 0; so = so->prev) {
     relocate(so, 0);
     /* TODO: this is just for testing! */
@@ -59,12 +57,12 @@ void do_relocations() {
   }
 }
 
-
 void relocate(dso *so, unsigned char rt_load) {
 #ifdef D_REL
   sl_printf("\nProcessing relocations for %s:\n", so->name);
 #endif
 
+  sl_printf("\nProcessing relocations for %s:\n", so->name);
   /* Resolve address and relocation address */
   Elf32_Addr *addr = 0;
   unsigned long *reloc = 0;
@@ -174,7 +172,7 @@ void relocate(dso *so, unsigned char rt_load) {
 			if (PTR_IN_REGION(*reloc, so->text_addr, so->text_size)
 						/*|| PTR_IN_REGION(*reloc, so->dso->init_, so->dso->init_size)
 						|| PTR_IN_REGION(*reloc, so->dso->fini, so->dso->fini_size)*/) {
-				fbt_add_callback(so->dso, (void*)*reloc);
+				/*fbt_add_callback(so->dso, (void*)*reloc);*/
 			 }
 		#endif
 		

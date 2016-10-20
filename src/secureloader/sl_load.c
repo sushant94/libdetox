@@ -39,6 +39,9 @@
 #include "sl_gscope.h"
 #include "sl_sym_lookup.h"
 #include "sl_libdetox.h"
+#include "sl_reloc.h"
+
+extern void relocate(dso *so, unsigned char rt_load);
 
 #ifdef SL_STATISTIC
 /* The number of loaded DSOs during this run */
@@ -53,6 +56,27 @@ extern struct rtld_global *rtld_glob;
 extern dso *so_chain;
 extern void runtime_trampoline();
 
+static void add_rel_callbacks(dso *so) {
+	sl_printf ("Adding callbacks.\n");
+	/* Iterate over relocations */
+	Elf32_Rel *rel = so->rel;
+	unsigned long *reloc = 0;
+	if (rel == 0)
+		return;
+	long i;
+	for (i = 0; i < so->relsz; ++i, ++rel) {
+		reloc = (unsigned long *) BYTE_STEP(so->base_addr, rel->r_offset);
+		long type = ELF32_R_TYPE(rel->r_info);
+		switch (type) {
+			case R_386_RELATIVE:
+				if (PTR_IN_REGION(*reloc, so->text_addr, so->text_size)) {
+					sl_printf ("Added.\n");
+					fbt_add_callback(so->dso, (void*)*reloc);
+				}
+			break;
+		}
+	}
+}
 
 /**
  * Checks if the given elf file is valid.
@@ -184,30 +208,14 @@ static void init_versions(dso *so) {
  * We have to set the runtime trampoline which resolves symbols at runtime.
  * @param so The shared object
  */
-#define DT_NUM      34
-// This is arch specific. It is 0 for x86.
-#define DT_THISPROCNUM 0
-#define DT_VERSIONTAGNUM 16
-#define DT_EXTRANUM	3
-#define DT_VALNUM 12
-#define DT_ADDRNUM 11
 static void init_got(dso *so) {
 	unsigned long *gaddr = (unsigned long *)so->gotplt;
 	void (*fp_runt_tramp)() = runtime_trampoline;
 
 	unsigned long *reloc;
-	void* value;
+	unsigned long * value;
 
-	int i = 0;
-	int limit = DT_NUM + DT_THISPROCNUM + DT_VERSIONTAGNUM + DT_EXTRANUM + DT_VALNUM + DT_ADDRNUM;
-	for (i = 0; i < limit; i++) {
-		if (so->l_info[i] != NULL) {
-			sl_printf ("l_info[%d] = 0x%x\n", i, so->l_info[i]->d_un.d_ptr);
-		} else {
-			sl_printf ("l_info[%d] = NULL\n", i);
-		}
-	}
-
+	relocate(so, 0);
 
 	if (gaddr != 0) {
 		/* The first entry is the dso pointer we later get as parameter, the
@@ -216,19 +224,19 @@ static void init_got(dso *so) {
 		*(++gaddr) = (unsigned long) so;
 		*(++gaddr) = (unsigned long) fp_runt_tramp;
 
-		/* These entries should point back to the plt for lazy binding */
+		/*[> These entries should point back to the plt for lazy binding <]*/
 		long i = 0;
 		Elf32_Rel *rel = so->pltrel;
 		if (rel == 0)
 			return;
 
 		for (i = 0; i < so->pltrelsz; ++i, ++rel) {
-			/* Get relocation address */
+			/*[> Get relocation address <]*/
 			reloc = (unsigned long *) BYTE_STEP(so->base_addr, rel->r_offset);
-			value = (void *) BYTE_STEP(so->base_addr, *reloc);
-			/*sl_printf ("Base: 0x%x; Offset: 0x%x; Value: 0x%x [0x%x]; reloc: 0x%x [0x%x]\n", so->base_addr, rel->r_offset, value, *value, reloc, *reloc);*/
+			value = (unsigned long *) BYTE_STEP(so->base_addr, *reloc);
+			sl_printf ("Base: 0x%x; Offset: 0x%x; Value: 0x%x [0x%x]; reloc: 0x%x [0x%x]\n", so->base_addr, rel->r_offset, value, *value, reloc, *reloc);
 			if(ELF32_R_TYPE(rel->r_info) == R_386_IRELATIVE) {
-				/* Need to perform an indirect call to (B + A) */
+				/*[> Need to perform an indirect call to (B + A) <]*/
 				value = ((void *(*) (void))(value))();
 			}
 			*reloc = (unsigned long) value;  
@@ -684,13 +692,16 @@ dso *load_elf(dso *loader, const char *name, const char *path, long fd,
 		}
 	}
 
+
+
 	/* Initialize Global Offset Table */
 	init_got(so);
-
 #if defined(VERIFY_CFTX)
 	/* Add object to dso chain if libdetox wants to check the control flow
 	   transfers */
 	add_dso(so, (char *)file_map);
+	add_rel_callbacks(so);
+
 
 #if defined(CALLBACK_MAIN_DETECTION) || defined(CALLBACK_DATA_SECTION_SEARCH)
 	/* Right after loading the dso we need to detect the libc callbacks to main/__libc_csu_init */

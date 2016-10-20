@@ -525,7 +525,7 @@ int sl_main(int argc, char **argv, char **envp, Elf32_auxv_t *auxv) {
   thread_control_block *tcb = setup_tls();
 
   /* Relocate all loaded objects */
-  do_relocations();
+  /*do_relocations();*/
 
   /* Movint the move_libc_to_front call after do_relocations seems to fix the exception test case. 
    * TODO: why? */

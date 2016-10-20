@@ -29,7 +29,7 @@ struct link_map {
    * and rtld_global_ro (see below) and without this the offsets in these structures
    * would be wrong... */
   //char placeholder[576];
-  char placeholder[580];
+  char placeholder[352] = {0x41};
 };
 
 /* NOT USED */

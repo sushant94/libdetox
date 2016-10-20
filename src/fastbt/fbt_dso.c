@@ -92,20 +92,21 @@ extern struct dso_chain *dso_chain;
 
 static void print_cftx(int type, char *msg, long errcode, unsigned char *src, struct dso_chain *srcdso, struct sh_symbol *src_symbol,
 unsigned char *dst, struct dso_chain *dstdso, struct sh_symbol *dst_symbol) {
-
   if(type == CFI_VIOLATION) llprinterr("*** CFI VIOLATION ***; %s; %d; %x; ", msg, errcode, src);
   else llprinterr("CFI WARNING; %s; %d; %x; ", msg, errcode, src);
   
   if(srcdso) llprinterr("%s (%x); ", srcdso->name, ((unsigned long)src-(unsigned long)srcdso->baseaddr));
   else llprinterr("-; ");
+
   if(src_symbol) llprinterr("%s; ", src_symbol->name);
   else llprinterr("-; ");
+
   llprinterr(">>> calls/jmps >>>; %x; ", dst);
   if(dstdso) llprinterr("%s (%x); ", dstdso->name, ((unsigned long)dst-(unsigned long)dstdso->baseaddr));
   else llprinterr("-; ");
+
   if(dst_symbol) llprinterr("%s;\n", dst_symbol->name);
   else llprinterr("-;\n");
-
 }
 
 /**
@@ -485,8 +486,8 @@ nr_total_cftx_checks++;
     return_value = 0;
   } else if (dstdso == 0) {
     /* Dst address does not belong to a loaded dso */
-    error("No destination dso found", CFI_ERR_NO_DSTDSO, src, srcdso, src_symbol, dst, dstdso, dst_symbol);
-    return_value = 0;
+    /*error("No destination dso found", CFI_ERR_NO_DSTDSO, src, srcdso, src_symbol, dst, dstdso, dst_symbol);*/
+    /*return_value = 0;*/
   } else if (type == CFTX_CALL_IND) { /* ---------------------------------------- CALL ----------------------------------------------- */
     if (srcdso == dstdso) { /* case: call where srcdso == dstdso ***********************************************************************/
 

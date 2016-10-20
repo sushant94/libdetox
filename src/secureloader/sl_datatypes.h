@@ -540,11 +540,8 @@ struct link_map {
 	struct link_map *l_next, *l_prev; /* Chain of loaded objects.  */
 
 	/* This is a hack to fill the space of link_map we do not use because it is linux loader internal stuff. But we need it as we have to support rtld_global and rtld_global_ro (see below) and without this the offsets in these structures would be wrong... */
-#ifdef LIBC2_9
-	char placeholder[576];
-#else
-	char placeholder[580];
-#endif
+	char placeholder[780];
+
 };
 
 /* NOT USED */
@@ -591,7 +588,6 @@ struct variable {
 /* This struct is normally linux loader internal but needed by the libc, libdl and others, so we have to support it. See ldsodefs.h of glibc. */
 struct rtld_global {
 # define DL_NNS 16
-
 	struct link_namespaces {
 		/* A pointer to the map for the main map. */
 		struct link_map *_ns_loaded;
@@ -604,7 +600,6 @@ struct rtld_global {
 		   reset if in _dl_close if the last global object is removed. */
 		unsigned long _ns_global_scope_alloc;
 
-#ifndef LIBC2_9
 		/* Search table for unique objects. */
 		struct unique_sym_table {
 			__rtld_lock_recursive_t lock;
@@ -619,22 +614,15 @@ struct rtld_global {
 			void (*free) (void *);
 		} _ns_unique_sym_table;
 
-#endif /* LIBC2_9 */
-
 		/* Keep track of changes to each namespace' list. */
 		struct r_debug _ns_debug;
 	} _dl_ns[DL_NNS];
 
-#ifndef LIBC2_9
 	/* One higher than index of last used namespace. */
 	unsigned long _dl_nns;
-#endif /* LIBC2_9 */
 
 	__rtld_lock_recursive_t _dl_load_lock;
-
-#ifndef LIBC2_9
 	__rtld_lock_recursive_t _dl_load_write_lock;
-#endif /* LIBC2_9 */
 
 	/* Incremented whenever something may have been added to dl_loaded. */
 	unsigned long long _dl_load_adds;
@@ -699,6 +687,9 @@ struct rtld_global {
 	/* Alignment requirement of the static TLS block. */
 	unsigned long _dl_tls_static_align;
 
+	#define TLS_SLOTINFO_SURPLUS (62)
+	#define DTV_SURPLUS     (14)
+
 	/* Initial dtv of the main thread, not allocated with normal malloc. */
 	void *_dl_initial_dtv;
 	/* Generation counter for the dtv. */
@@ -722,6 +713,19 @@ struct rtld_global_ro {
 
 	/* If nonzero the appropriate debug information is printed. */
 	long _dl_debug_mask;
+	#define DL_DEBUG_LIBS       (1 << 0)
+    #define DL_DEBUG_IMPCALLS   (1 << 1)
+    #define DL_DEBUG_BINDINGS   (1 << 2)
+    #define DL_DEBUG_SYMBOLS    (1 << 3)
+    #define DL_DEBUG_VERSIONS   (1 << 4)
+    #define DL_DEBUG_RELOC      (1 << 5)
+    #define DL_DEBUG_FILES      (1 << 6)
+    #define DL_DEBUG_STATISTICS (1 << 7)
+    #define DL_DEBUG_UNUSED     (1 << 8)
+    #define DL_DEBUG_SCOPES     (1 << 9)
+    /* These two are used only internally.  */
+    #define DL_DEBUG_HELP       (1 << 10)
+    #define DL_DEBUG_PRELINK    (1 << 11)
 
 	/* OS version. */
 	unsigned long _dl_osversion;
@@ -732,6 +736,8 @@ struct rtld_global_ro {
 
 	/* Cached value of `getpagesize ()'. */
 	unsigned long _dl_pagesize;
+
+	int _dl_inhibit_cache;
 
 	/* Copy of the content of `_dl_main_searchlist' at startup time. */
 	struct r_scope_elem _dl_initial_searchlist;
@@ -767,9 +773,11 @@ struct rtld_global_ro {
 	/* Mask for important hardware capabilities we honour. */
 	unsigned long long int _dl_hwcap_mask;
 
+	Elf32_auxv_t *_dl_auxv;
+
 	/* Get architecture specific definitions. */
-	const char _dl_x86_cap_flags[32][8];
-	const char _dl_x86_platforms[4][5];
+	//const char _dl_x86_cap_flags[32][8];
+	//const char _dl_x86_platforms[4][5];
 
 	/* Names of shared object for which the RPATH should be ignored. */
 	const char *_dl_inhibit_rpath;
@@ -810,6 +818,8 @@ struct rtld_global_ro {
 	/* At startup time we set up the normal DSO data structure for it,
 	   and this points to it. */
 	struct link_map *_dl_sysinfo_map;
+
+	uint64_t _dl_hwcap2;
 
 
 	/* We add a function table to _rtld_global which is then used to
